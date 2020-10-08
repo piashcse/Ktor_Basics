@@ -1,0 +1,59 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'kotlin'
+apply plugin: 'application'
+
+group 'com.example'
+version '0.0.1'
+mainClassName = "io.ktor.server.netty.EngineMain"
+
+sourceSets {
+    main.kotlin.srcDirs = main.java.srcDirs = ['src']
+    test.kotlin.srcDirs = test.java.srcDirs = ['test']
+    main.resources.srcDirs = ['resources']
+    test.resources.srcDirs = ['testresources']
+}
+
+repositories {
+    mavenLocal()
+    jcenter()
+    maven { url 'https://kotlin.bintray.com/ktor' }
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "io.ktor:ktor-server-netty:$ktor_version"
+    implementation "ch.qos.logback:logback-classic:$logback_version"
+    implementation "io.ktor:ktor-client-core:$ktor_version"
+    implementation "io.ktor:ktor-client-core-jvm:$ktor_version"
+    implementation "io.ktor:ktor-client-apache:$ktor_version"
+    testImplementation "io.ktor:ktor-server-tests:$ktor_version"
+    implementation "io.ktor:ktor-gson:$ktor_version"
+    // jwt token
+    implementation "io.ktor:ktor-auth-jwt:$ktor_version"
+    // Exposed ORM library
+    implementation "org.jetbrains.exposed:exposed-core:$exposed_version"
+    implementation "org.jetbrains.exposed:exposed-dao:$exposed_version"
+    implementation "org.jetbrains.exposed:exposed-jdbc:$exposed_version"
+
+    // h2
+    implementation 'com.h2database:h2:1.4.200'
+    // postgresql
+    implementation "org.postgresql:postgresql:42.2.2"
+    implementation 'com.zaxxer:HikariCP:3.4.2'
+
+    implementation 'com.github.papsign:Ktor-OpenAPI-Generator:-SNAPSHOT'
+
+    implementation 'com.github.nielsfalk:ktor-swagger:0.7.0'
+
+
+}
