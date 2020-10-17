@@ -1,4 +1,6 @@
 package com.example.databasehelper
+import com.example.entities.ProductTable
+import com.example.entities.UserTable
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import entities.Fruits
@@ -11,10 +13,18 @@ object DatabaseFactory {
        // Database.connect(hikari())
         initDB()
         transaction {
-            create(Fruits)
+            create(Fruits, UserTable, ProductTable)
         }
     }
 
+  private  fun initDB() {
+        // database connection is handled from hikari properties
+        val config = HikariConfig("/hikari.properties")
+        val ds = HikariDataSource(config)
+        Database.connect(ds)
+    }
+
+    // database connection for h2 d
     private fun hikari(): HikariDataSource {
         val config = HikariConfig()
         config.driverClassName = "org.h2.Driver"
@@ -24,10 +34,5 @@ object DatabaseFactory {
         config.transactionIsolation = "TRANSACTION_REPEATABLE_READ"
         config.validate()
         return HikariDataSource(config)
-    }
-  private  fun initDB() {
-        val config = HikariConfig("/hikari.properties")
-        val ds = HikariDataSource(config)
-        Database.connect(ds)
     }
 }

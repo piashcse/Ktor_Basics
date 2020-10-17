@@ -1,9 +1,8 @@
-package com.example.models
+package com.example.models.request
 
 import io.ktor.auth.Principal
 
-data class User(
+data class UserRequest(
         val mobile: String,
-        val name: String,
         val password: String
 ) : Principal

@@ -1,55 +1,56 @@
 package com.example
 
+import com.example.constants.AppConstants
+import com.example.controllers.ProductController
+import com.example.controllers.UserController
 import com.example.databasehelper.DatabaseFactory
+import com.example.jwt.JwtConfig
+import com.example.models.User
+import com.example.routing.product
+import com.example.routing.user
 import com.papsign.ktor.openapigen.OpenAPIGen
-import com.papsign.ktor.openapigen.content.type.binary.BinaryContentTypeParser.respond
 import com.papsign.ktor.openapigen.openAPIGen
+import com.papsign.ktor.openapigen.route.StatusCode
 import com.papsign.ktor.openapigen.schema.namer.DefaultSchemaNamer
 import com.papsign.ktor.openapigen.schema.namer.SchemaNamer
 import io.ktor.application.*
 import io.ktor.routing.Routing
 import io.ktor.gson.gson
 import controllers.FruitController
+import helpers.JsonResponse
+import io.ktor.auth.Authentication
+import io.ktor.auth.jwt.jwt
 import io.ktor.features.*
+import io.ktor.http.HttpStatusCode
 import io.ktor.locations.Locations
 import io.ktor.response.respond
 import io.ktor.response.respondRedirect
 import io.ktor.routing.get
+import org.apache.http.auth.InvalidCredentialsException
 import routing.api
 import routing.fruits
 import kotlin.reflect.KType
-val sizeSchemaMap = mapOf(
-        "type" to "number",
-        "minimum" to 0
-)
-fun rectangleSchemaMap(refBase: String) = mapOf(
-        "type" to "object",
-        "properties" to mapOf(
-                "a" to mapOf("${'$'}ref" to "$refBase/size"),
-                "b" to mapOf("${'$'}ref" to "$refBase/size")
-        )
-)
 
-
-const val petUuid = "petUuid"
-
-val petIdSchema = mapOf(
-        "type" to "string",
-        "format" to "date",
-        "description" to "The identifier of the pet to be accessed"
-)
 @Suppress("unused") // Referenced in application.conf
 @kotlin.jvm.JvmOverloads
 fun Application.module(testing: Boolean = false) {
-   /* val appConfig = environment.config
-
-    val databaseUrl = appConfig.property("database.url").getString()
-    val databaseDriver = appConfig.property("database.driver").getString()
-
-    Database.connect(databaseUrl, databaseDriver)
-    TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE*/
-
     DatabaseFactory.init()
+    val userController = UserController()
+
+    install(StatusPages) {
+        exception<MissingRequestParameterException> { exception ->
+            call.respond(HttpStatusCode.BadRequest, mapOf("description" to "Parameter missing", "error" to (exception.message ?: "")))
+        }
+        status(HttpStatusCode.Unauthorized) { statusCode ->
+            call.respond(JsonResponse.failure(AppConstants.Error.UNAUTHRIZED,  statusCode))
+        }
+        status(HttpStatusCode.BadRequest) { statusCode ->
+            call.respond(JsonResponse.failure(AppConstants.Error.BAD_REQUEST,  statusCode))
+        }
+        status(HttpStatusCode.InternalServerError) { statusCode ->
+            call.respond(JsonResponse.failure(AppConstants.Error.INTERNAL_SERVER_ERROR,  statusCode))
+        }
+    }
     install(Compression)
     install(CORS) {
         anyHost()
@@ -62,6 +63,26 @@ fun Application.module(testing: Boolean = false) {
         }
     }
     install(Locations)
+    install(Authentication) {
+        /**
+         * Setup the JWT authentication to be used in [Routing].
+         * If the token is valid, the corresponding [User] is fetched from the database.
+         * The [User] can then be accessed in each [ApplicationCall].
+         */
+        jwt {
+            verifier(JwtConfig.verifier)
+            realm = "ktor.io"
+            validate {
+               val mobile =  it.payload.getClaim("mobile").asString()
+                if (mobile != null){
+                     userController.findByMobile(mobile)
+                }else{
+                    null
+                }
+            }
+        }
+    }
+
     install(OpenAPIGen) {
         // basic info
         info {
@@ -70,7 +91,7 @@ fun Application.module(testing: Boolean = false) {
             description = "The Test API"
             contact {
                 name = "Mehedi Hassan Piash"
-                email = "support@test.com"
+                email = "piash599@gmail.com"
             }
         }
         // describe the server, add as many as you want
@@ -85,39 +106,19 @@ fun Application.module(testing: Boolean = false) {
             }
         })
     }
-    /*install(SwaggerSupport) {
-        forwardRoot = true
-        val information = Information(
-                version = "0.1",
-                title = "sample api implemented in ktor",
-                description = "This is a sample which combines [ktor](https://github.com/Kotlin/ktor) with [swaggerUi](https://swagger.io/). You find the sources on [github](https://github.com/nielsfalk/ktor-swagger)",
-                contact = Contact(
-                        name = "Niels Falk",
-                        url = "https://nielsfalk.de"
-                )
-        )
-        swagger = Swagger().apply {
-            info = information
-            definitions["size"] = sizeSchemaMap
-            definitions[petUuid] = petIdSchema
-            definitions["Rectangle"] = rectangleSchemaMap("#/definitions")
-        }
-        openApi = OpenApi().apply {
-            info = information
-            components.schemas["size"] = sizeSchemaMap
-            components.schemas[petUuid] = petIdSchema
-            components.schemas["Rectangle"] = rectangleSchemaMap("#/components/schemas")
-        }
-    }*/
     install(Routing) {
-        api()
-        fruits(FruitController())
         get("/openapi.json") {
             call.respond(application.openAPIGen.api.serialize())
         }
         get("/2") {
             call.respondRedirect("/swagger-ui/index.html?url=/openapi.json", true)
         }
+
+
+        api()
+        fruits(FruitController())
+        user(UserController())
+        product(ProductController())
     }
 }
 
